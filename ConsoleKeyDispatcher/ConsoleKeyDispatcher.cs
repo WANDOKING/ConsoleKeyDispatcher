@@ -1,19 +1,14 @@
-﻿namespace TestCommonUtils;
+﻿namespace ConsoleKeyUtils;
 
 /// <summary>
 /// 콘솔 키 입력에 따른 핸들러를 등록하고 실행하는 디스패처입니다.
 /// </summary>
 public class ConsoleKeyDispatcher
 {
+    private readonly Dictionary<ConsoleKey, string?> handlerNames = new ();
+    private readonly Dictionary<ConsoleKey, Func<Task>> asyncHandlers = new ();
+    private readonly Dictionary<ConsoleKey, Action> syncHandlers = new ();
     private bool isRequestedToExitDispatching;
-    private readonly Dictionary<ConsoleKey, string?> handlerNames = new();
-    private readonly Dictionary<ConsoleKey, Func<Task>> asyncHandlers = new();
-    private readonly Dictionary<ConsoleKey, Action> syncHandlers = new();
-
-    /// <summary>
-    /// 기본 디스패처 인스턴스입니다.
-    /// </summary>
-    public static ConsoleKeyDispatcher Default { get; } = new ConsoleKeyDispatcher();
 
     /// <summary>
     /// 생성자입니다.
@@ -31,6 +26,16 @@ public class ConsoleKeyDispatcher
             dispatchThread.Start();
         }
     }
+
+    /// <summary>
+    /// 기본 디스패처 인스턴스입니다.
+    /// </summary>
+    public static ConsoleKeyDispatcher Default { get; } = new ConsoleKeyDispatcher();
+
+    /// <summary>
+    /// 등록된 핸들러들입니다.
+    /// </summary>
+    public IEnumerable<(ConsoleKey key, string? name)> HandlerNames => handlerNames.Select(kv => (kv.Key, kv.Value));
 
     /// <summary>
     /// 비동기 핸들러를 등록합니다.
@@ -71,7 +76,7 @@ public class ConsoleKeyDispatcher
     /// <summary>
     /// <see cref="KeepDispatching"/>을 반환하게 하는 핸들러를 등록합니다.
     /// </summary>
-    /// <param name="key"></param>
+    /// <param name="key">입력 키입니다.</param>
     public void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
     {
         BindHandler(key, () => isRequestedToExitDispatching = true, "Exit Handler");
@@ -90,7 +95,7 @@ public class ConsoleKeyDispatcher
             {
                 asyncHandlers.Remove(key);
             }
-                
+
             return true;
         }
 
@@ -183,16 +188,13 @@ public class ConsoleKeyDispatcher
     }
 
     /// <summary>
-    /// 등록된 핸들러들입니다.
-    /// </summary>
-    public IEnumerable<(ConsoleKey key, string? name)> HandlerNames => handlerNames.Select(kv => (kv.Key, kv.Value));
-
-    /// <summary>
     /// 디스패칭을 실패할 때 까지 무한 반복합니다.
     /// </summary>
     public void KeepDispatchingUntilFails()
     {
-        while (TryDispatch());
+        while (TryDispatch())
+        {
+        }
     }
 
     /// <summary>

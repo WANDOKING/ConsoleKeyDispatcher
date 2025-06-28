@@ -1,4 +1,4 @@
-﻿using TestCommonUtils;
+﻿using ConsoleKeyUtils;
 
 namespace Example;
 
