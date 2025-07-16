@@ -1,6 +1,26 @@
 ﻿namespace ConsoleKeyUtils;
 
 /// <summary>
+/// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트의 인자입니다.
+/// </summary>
+public class KeyNotRegisteredEventArgs : EventArgs
+{
+    /// <summary>
+    /// 생성자입니다.
+    /// </summary>
+    /// <param name="key">입력된 키 입니다.</param>
+    public KeyNotRegisteredEventArgs(ConsoleKey key)
+    {
+        Key = key;
+    }
+
+    /// <summary>
+    /// 입력된 키 입니다.
+    /// </summary>
+    public ConsoleKey Key { get; }
+}
+
+/// <summary>
 /// 콘솔 키 입력에 따른 핸들러를 등록하고 실행하는 디스패처입니다.
 /// </summary>
 public class ConsoleKeyDispatcher
@@ -26,6 +46,11 @@ public class ConsoleKeyDispatcher
             dispatchThread.Start();
         }
     }
+
+    /// <summary>
+    /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
+    /// </summary>
+    public event EventHandler<KeyNotRegisteredEventArgs>? KeyNotRegistered;
 
     /// <summary>
     /// 기본 디스패처 인스턴스입니다.
@@ -156,6 +181,7 @@ public class ConsoleKeyDispatcher
         }
         else
         {
+            KeyNotRegistered?.Invoke(this, new KeyNotRegisteredEventArgs(keyInfo.Key));
             return false;
         }
     }

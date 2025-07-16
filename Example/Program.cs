@@ -17,6 +17,12 @@ internal class Program
             }
         }, "Help");
 
+        // 등록되지 않은 키가 입력되었을 때의 이벤트 핸들러를 등록합니다.
+        dispatcher.KeyNotRegistered += (sender, e) =>
+        {
+            Console.WriteLine($"Key '{e.Key}' is not registered. Press 'H' for help.");
+        };
+
         dispatcher.BindExitHandler();
 
         dispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
