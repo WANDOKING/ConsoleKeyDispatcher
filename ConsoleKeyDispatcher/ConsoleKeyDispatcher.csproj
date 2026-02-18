@@ -4,7 +4,23 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- NuGet Packaging Properties -->
+    <PackageId>ConsoleKeyDispatcher</PackageId>
+    <Version>1.0.1</Version>
+    <Authors>dowankim</Authors>
+    <Description>A console key dispatcher library for .NET</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageProjectUrl>https://github.com/WANDOKING/ConsoleKeyDispatcher</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/WANDOKING/ConsoleKeyDispatcher</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Tags>console;dispatcher</Tags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
