@@ -21,6 +21,33 @@ public class KeyNotRegisteredEventArgs : EventArgs
 }
 
 /// <summary>
+/// 핸들러 실행 중 예외가 발생했을 때 전달되는 이벤트 인자입니다.
+/// </summary>
+public class HandlerExceptionEventArgs : EventArgs
+{
+    /// <summary>
+    /// 생성자입니다.
+    /// </summary>
+    /// <param name="key">예외가 발생한 핸들러에 대응하는 키입니다.</param>
+    /// <param name="exception">발생한 예외입니다.</param>
+    public HandlerExceptionEventArgs(ConsoleKey key, Exception exception)
+    {
+        Key = key;
+        Exception = exception;
+    }
+
+    /// <summary>
+    /// 예외가 발생한 핸들러에 대응하는 키입니다.
+    /// </summary>
+    public ConsoleKey Key { get; }
+
+    /// <summary>
+    /// 발생한 예외입니다.
+    /// </summary>
+    public Exception Exception { get; }
+}
+
+/// <summary>
 /// 콘솔 키 입력에 따른 핸들러를 등록하고 실행하는 디스패처입니다.
 /// </summary>
 public class ConsoleKeyDispatcher
@@ -51,6 +78,11 @@ public class ConsoleKeyDispatcher
     /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
     /// </summary>
     public event EventHandler<KeyNotRegisteredEventArgs>? KeyNotRegistered;
+
+    /// <summary>
+    /// 핸들러 실행 중 예외가 발생했을 때 발생하는 이벤트입니다.
+    /// </summary>
+    public event EventHandler<HandlerExceptionEventArgs>? HandlerException;
 
     /// <summary>
     /// 기본 디스패처 인스턴스입니다.
@@ -171,12 +203,28 @@ public class ConsoleKeyDispatcher
 
         if (syncHandlers.TryGetValue(keyInfo.Key, out var syncHandler))
         {
-            syncHandler.Invoke();
+            try
+            {
+                syncHandler.Invoke();
+            }
+            catch (Exception ex)
+            {
+                HandlerException?.Invoke(this, new HandlerExceptionEventArgs(keyInfo.Key, ex));
+            }
+
             return true;
         }
         else if (asyncHandlers.TryGetValue(keyInfo.Key, out var asyncHandler))
         {
-            await asyncHandler.Invoke();
+            try
+            {
+                await asyncHandler.Invoke();
+            }
+            catch (Exception ex)
+            {
+                HandlerException?.Invoke(this, new HandlerExceptionEventArgs(keyInfo.Key, ex));
+            }
+
             return true;
         }
         else

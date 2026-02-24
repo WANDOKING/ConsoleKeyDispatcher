@@ -375,4 +375,36 @@ public class ConsoleKeyDispatcherTests
 
         Assert.IsFalse(secondResult);
     }
+
+    [TestMethod]
+    public void HandlerException_CanSubscribeEvent()
+    {
+        var dispatcher = new ConsoleKeyDispatcher();
+        bool eventSubscribed = false;
+
+        dispatcher.HandlerException += (sender, args) => { eventSubscribed = true; };
+
+        Assert.IsFalse(eventSubscribed);
+    }
+
+    [TestMethod]
+    public void HandlerException_CanSubscribeAndUnsubscribe()
+    {
+        var dispatcher = new ConsoleKeyDispatcher();
+        EventHandler<HandlerExceptionEventArgs> handler = (sender, args) => { };
+
+        dispatcher.HandlerException += handler;
+        dispatcher.HandlerException -= handler;
+    }
+
+    [TestMethod]
+    public void HandlerException_MultipleSubscribers_CanSubscribe()
+    {
+        var dispatcher = new ConsoleKeyDispatcher();
+        int subscriberCount = 0;
+
+        dispatcher.HandlerException += (sender, args) => { subscriberCount++; };
+        dispatcher.HandlerException += (sender, args) => { subscriberCount++; };
+        dispatcher.HandlerException += (sender, args) => { subscriberCount++; };
+    }
 }
