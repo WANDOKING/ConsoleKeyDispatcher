@@ -48,10 +48,6 @@ dispatcher.BindAsyncHandler(ConsoleKey.C, async () =>
 dispatcher.KeepDispatching();
 ```
 
-## 설치
-
-NuGet 패키지로 배포되지 않으므로, 소스 코드를 프로젝트에 추가하여 사용하세요.
-
 ## 라이선스
 
 MIT License
