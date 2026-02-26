@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        configuration: [ Debug, Release ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build (${{ matrix.configuration }})
+        run: dotnet build --no-restore --configuration ${{ matrix.configuration }}
+
+      - name: Test
+        run: dotnet test --no-build --configuration ${{ matrix.configuration }} --verbosity normal
+
+  publish:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Get version from csproj
+        id: version
+        run: |
+          VERSION=$(grep -oP '<Version>\K[^<]+' ConsoleKeyDispatcher/ConsoleKeyDispatcher.csproj)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Pack
+        run: dotnet pack --configuration Release --output ./nupkg
+
+      - name: Push to NuGet
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create and push tag
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping."
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
