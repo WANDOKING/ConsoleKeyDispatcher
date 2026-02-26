@@ -273,7 +273,7 @@ public class ConsoleKeyDispatcher
 
     /// <summary>
     /// 디스패칭을 무한 반복합니다.
-    /// 한 번 실행하면 <see cref="Dispose"/>호출 전까지 절대 반환되지 않습니다.
+    /// 한 번 실행하면 <see cref="BindExitHandler(ConsoleKey)"/>로 등록한 키 입력 전까지 절대 반환되지 않습니다.
     /// </summary>
     public void KeepDispatching()
     {
