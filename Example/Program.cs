@@ -4,7 +4,7 @@ namespace Example;
 
 internal class Program
 {
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.H, () =>
         {
@@ -31,6 +31,7 @@ internal class Program
             Console.WriteLine("Async operation completed after 1 second.");
         }, "Async Operation");
 
+        Console.WriteLine("Press 'H' for help. Press 'Escape' to exit.");
         ConsoleKeyDispatcher.KeepDispatching();
     }
 }

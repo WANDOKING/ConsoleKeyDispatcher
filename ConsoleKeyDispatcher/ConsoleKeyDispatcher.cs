@@ -52,9 +52,9 @@ public class HandlerExceptionEventArgs : EventArgs
 /// </summary>
 public static class ConsoleKeyDispatcher
 {
-    private static readonly Dictionary<ConsoleKey, string?> handlerNames = new ();
-    private static readonly Dictionary<ConsoleKey, Func<Task>> asyncHandlers = new ();
-    private static readonly Dictionary<ConsoleKey, Action> syncHandlers = new ();
+    private static readonly Dictionary<ConsoleKey, string?> HandlerNamesByKey = new Dictionary<ConsoleKey, string?>();
+    private static readonly Dictionary<ConsoleKey, Func<Task>> AsyncHandlersByKey = new Dictionary<ConsoleKey, Func<Task>>();
+    private static readonly Dictionary<ConsoleKey, Action> SyncHandlersByKey = new Dictionary<ConsoleKey, Action>();
     private static bool isRequestedToExitDispatching;
 
     /// <summary>
@@ -70,7 +70,7 @@ public static class ConsoleKeyDispatcher
     /// <summary>
     /// 등록된 핸들러들입니다.
     /// </summary>
-    public static IEnumerable<(ConsoleKey key, string? name)> HandlerNames => handlerNames.Select(kv => (kv.Key, kv.Value));
+    public static IEnumerable<(ConsoleKey key, string? name)> HandlerNames => HandlerNamesByKey.Select(kv => (kv.Key, kv.Value));
 
     /// <summary>
     /// 비동기 핸들러를 등록합니다.
@@ -81,13 +81,13 @@ public static class ConsoleKeyDispatcher
     /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
     public static void BindAsyncHandler(ConsoleKey key, Func<Task> handler, string? name = default)
     {
-        if (handlerNames.ContainsKey(key))
+        if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
         }
 
-        asyncHandlers[key] = handler;
-        handlerNames[key] = name;
+        AsyncHandlersByKey[key] = handler;
+        HandlerNamesByKey[key] = name;
     }
 
     /// <summary>
@@ -99,13 +99,13 @@ public static class ConsoleKeyDispatcher
     /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
     public static void BindHandler(ConsoleKey key, Action handler, string? name = default)
     {
-        if (handlerNames.ContainsKey(key))
+        if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
         }
 
-        syncHandlers[key] = handler;
-        handlerNames[key] = name;
+        SyncHandlersByKey[key] = handler;
+        HandlerNamesByKey[key] = name;
     }
 
     /// <summary>
@@ -124,11 +124,11 @@ public static class ConsoleKeyDispatcher
     /// <returns>핸들러를 제거했을 경우 true, 그렇지 않으면 false입니다.</returns>
     public static bool RemoveHandler(ConsoleKey key)
     {
-        if (handlerNames.Remove(key))
+        if (HandlerNamesByKey.Remove(key))
         {
-            if (syncHandlers.Remove(key) is false)
+            if (SyncHandlersByKey.Remove(key) is false)
             {
-                asyncHandlers.Remove(key);
+                AsyncHandlersByKey.Remove(key);
             }
 
             return true;
@@ -142,9 +142,9 @@ public static class ConsoleKeyDispatcher
     /// </summary>
     public static void Reset()
     {
-        handlerNames.Clear();
-        asyncHandlers.Clear();
-        syncHandlers.Clear();
+        HandlerNamesByKey.Clear();
+        AsyncHandlersByKey.Clear();
+        SyncHandlersByKey.Clear();
         isRequestedToExitDispatching = false;
         KeyNotRegistered = null;
         HandlerException = null;
@@ -192,7 +192,7 @@ public static class ConsoleKeyDispatcher
     {
         var keyInfo = Console.ReadKey(intercept: true);
 
-        if (syncHandlers.TryGetValue(keyInfo.Key, out var syncHandler))
+        if (SyncHandlersByKey.TryGetValue(keyInfo.Key, out var syncHandler))
         {
             try
             {
@@ -205,7 +205,7 @@ public static class ConsoleKeyDispatcher
 
             return true;
         }
-        else if (asyncHandlers.TryGetValue(keyInfo.Key, out var asyncHandler))
+        else if (AsyncHandlersByKey.TryGetValue(keyInfo.Key, out var asyncHandler))
         {
             try
             {
