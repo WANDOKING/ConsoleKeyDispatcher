@@ -50,49 +50,27 @@ public class HandlerExceptionEventArgs : EventArgs
 /// <summary>
 /// 콘솔 키 입력에 따른 핸들러를 등록하고 실행하는 디스패처입니다.
 /// </summary>
-public class ConsoleKeyDispatcher
+public static class ConsoleKeyDispatcher
 {
-    private readonly Dictionary<ConsoleKey, string?> handlerNames = new ();
-    private readonly Dictionary<ConsoleKey, Func<Task>> asyncHandlers = new ();
-    private readonly Dictionary<ConsoleKey, Action> syncHandlers = new ();
-    private bool isRequestedToExitDispatching;
-
-    /// <summary>
-    /// 생성자입니다.
-    /// </summary>
-    /// <param name="useBackgroundDispatchThread">true로 설정하면 백그라운드에서 디스패칭하는 스레드를 수행합니다.</param>
-    public ConsoleKeyDispatcher(bool useBackgroundDispatchThread = false)
-    {
-        if (useBackgroundDispatchThread)
-        {
-            Thread dispatchThread = new Thread(() =>
-            {
-                KeepDispatching();
-            });
-
-            dispatchThread.Start();
-        }
-    }
+    private static readonly Dictionary<ConsoleKey, string?> HandlerNamesByKey = new Dictionary<ConsoleKey, string?>();
+    private static readonly Dictionary<ConsoleKey, Func<Task>> AsyncHandlersByKey = new Dictionary<ConsoleKey, Func<Task>>();
+    private static readonly Dictionary<ConsoleKey, Action> SyncHandlersByKey = new Dictionary<ConsoleKey, Action>();
+    private static bool isRequestedToExitDispatching;
 
     /// <summary>
     /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
     /// </summary>
-    public event EventHandler<KeyNotRegisteredEventArgs>? KeyNotRegistered;
+    public static event EventHandler<KeyNotRegisteredEventArgs>? KeyNotRegistered;
 
     /// <summary>
     /// 핸들러 실행 중 예외가 발생했을 때 발생하는 이벤트입니다.
     /// </summary>
-    public event EventHandler<HandlerExceptionEventArgs>? HandlerException;
-
-    /// <summary>
-    /// 기본 디스패처 인스턴스입니다.
-    /// </summary>
-    public static ConsoleKeyDispatcher Default { get; } = new ConsoleKeyDispatcher();
+    public static event EventHandler<HandlerExceptionEventArgs>? HandlerException;
 
     /// <summary>
     /// 등록된 핸들러들입니다.
     /// </summary>
-    public IEnumerable<(ConsoleKey key, string? name)> HandlerNames => handlerNames.Select(kv => (kv.Key, kv.Value));
+    public static IEnumerable<(ConsoleKey key, string? name)> HandlerNames => HandlerNamesByKey.Select(kv => (kv.Key, kv.Value));
 
     /// <summary>
     /// 비동기 핸들러를 등록합니다.
@@ -101,15 +79,15 @@ public class ConsoleKeyDispatcher
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
     /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
-    public void BindAsyncHandler(ConsoleKey key, Func<Task> handler, string? name = default)
+    public static void BindAsyncHandler(ConsoleKey key, Func<Task> handler, string? name = default)
     {
-        if (handlerNames.ContainsKey(key))
+        if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
         }
 
-        asyncHandlers[key] = handler;
-        handlerNames[key] = name;
+        AsyncHandlersByKey[key] = handler;
+        HandlerNamesByKey[key] = name;
     }
 
     /// <summary>
@@ -119,22 +97,22 @@ public class ConsoleKeyDispatcher
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
     /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
-    public void BindHandler(ConsoleKey key, Action handler, string? name = default)
+    public static void BindHandler(ConsoleKey key, Action handler, string? name = default)
     {
-        if (handlerNames.ContainsKey(key))
+        if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
         }
 
-        syncHandlers[key] = handler;
-        handlerNames[key] = name;
+        SyncHandlersByKey[key] = handler;
+        HandlerNamesByKey[key] = name;
     }
 
     /// <summary>
     /// <see cref="KeepDispatching"/>을 반환하게 하는 핸들러를 등록합니다.
     /// </summary>
     /// <param name="key">입력 키입니다.</param>
-    public void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
+    public static void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
     {
         BindHandler(key, () => isRequestedToExitDispatching = true, "Exit Handler");
     }
@@ -144,13 +122,13 @@ public class ConsoleKeyDispatcher
     /// </summary>
     /// <param name="key">제거할 입력 키입니다.</param>
     /// <returns>핸들러를 제거했을 경우 true, 그렇지 않으면 false입니다.</returns>
-    public bool RemoveHandler(ConsoleKey key)
+    public static bool RemoveHandler(ConsoleKey key)
     {
-        if (handlerNames.Remove(key))
+        if (HandlerNamesByKey.Remove(key))
         {
-            if (syncHandlers.Remove(key) is false)
+            if (SyncHandlersByKey.Remove(key) is false)
             {
-                asyncHandlers.Remove(key);
+                AsyncHandlersByKey.Remove(key);
             }
 
             return true;
@@ -160,10 +138,23 @@ public class ConsoleKeyDispatcher
     }
 
     /// <summary>
+    /// 모든 핸들러와 이벤트 구독을 제거하고 디스패처를 초기 상태로 리셋합니다.
+    /// </summary>
+    public static void Reset()
+    {
+        HandlerNamesByKey.Clear();
+        AsyncHandlersByKey.Clear();
+        SyncHandlersByKey.Clear();
+        isRequestedToExitDispatching = false;
+        KeyNotRegistered = null;
+        HandlerException = null;
+    }
+
+    /// <summary>
     /// 키 입력에 따른 핸들러를 실행합니다.
     /// </summary>
     /// <exception cref="InvalidOperationException">등록되지 않은 키가 입력되었을 경우 발생합니다.</exception>
-    public void Dispatch()
+    public static void Dispatch()
     {
         if (TryDispatch() is false)
         {
@@ -176,7 +167,7 @@ public class ConsoleKeyDispatcher
     /// </summary>
     /// <returns>비동기 핸들러 실행 작업입니다.</returns>
     /// <exception cref="InvalidOperationException">등록되지 않은 키가 입력되었을 경우 발생합니다.</exception>
-    public async Task DispatchAsync()
+    public static async Task DispatchAsync()
     {
         if (await TryDispatchAsync() is false)
         {
@@ -188,7 +179,7 @@ public class ConsoleKeyDispatcher
     /// 키 입력에 따른 핸들러를 실행합니다.
     /// </summary>
     /// <returns>핸들러를 실행했을 경우 true, 해당하는 키에 대한 핸들러가 입력되지 않았을 경우 false입니다.</returns>
-    public bool TryDispatch()
+    public static bool TryDispatch()
     {
         return TryDispatchAsync().Result;
     }
@@ -197,11 +188,11 @@ public class ConsoleKeyDispatcher
     /// 비동기로 키 입력에 따른 핸들러를 실행합니다.
     /// </summary>
     /// <returns>핸들러를 실행했을 경우 true, 해당하는 키에 대한 핸들러가 입력되지 않았을 경우 false입니다.</returns>
-    public async Task<bool> TryDispatchAsync()
+    public static async Task<bool> TryDispatchAsync()
     {
         var keyInfo = Console.ReadKey(intercept: true);
 
-        if (syncHandlers.TryGetValue(keyInfo.Key, out var syncHandler))
+        if (SyncHandlersByKey.TryGetValue(keyInfo.Key, out var syncHandler))
         {
             try
             {
@@ -209,12 +200,12 @@ public class ConsoleKeyDispatcher
             }
             catch (Exception ex)
             {
-                HandlerException?.Invoke(this, new HandlerExceptionEventArgs(keyInfo.Key, ex));
+                HandlerException?.Invoke(null, new HandlerExceptionEventArgs(keyInfo.Key, ex));
             }
 
             return true;
         }
-        else if (asyncHandlers.TryGetValue(keyInfo.Key, out var asyncHandler))
+        else if (AsyncHandlersByKey.TryGetValue(keyInfo.Key, out var asyncHandler))
         {
             try
             {
@@ -222,14 +213,14 @@ public class ConsoleKeyDispatcher
             }
             catch (Exception ex)
             {
-                HandlerException?.Invoke(this, new HandlerExceptionEventArgs(keyInfo.Key, ex));
+                HandlerException?.Invoke(null, new HandlerExceptionEventArgs(keyInfo.Key, ex));
             }
 
             return true;
         }
         else
         {
-            KeyNotRegistered?.Invoke(this, new KeyNotRegisteredEventArgs(keyInfo.Key));
+            KeyNotRegistered?.Invoke(null, new KeyNotRegisteredEventArgs(keyInfo.Key));
             return false;
         }
     }
@@ -238,7 +229,7 @@ public class ConsoleKeyDispatcher
     /// 키가 입력된 경우에만 핸들러를 실행합니다.
     /// 그렇지 않은 경우 바로 반환됩니다.
     /// </summary>
-    public void DispatchIfKeyAvailable()
+    public static void DispatchIfKeyAvailable()
     {
         if (Console.KeyAvailable)
         {
@@ -251,7 +242,7 @@ public class ConsoleKeyDispatcher
     /// 그렇지 않은 경우 바로 반환됩니다.
     /// </summary>
     /// <returns>비동기 핸들러 실행 작업입니다.</returns>
-    public Task DispatchIfKeyAvailableAsync()
+    public static Task DispatchIfKeyAvailableAsync()
     {
         if (Console.KeyAvailable is false)
         {
@@ -264,7 +255,7 @@ public class ConsoleKeyDispatcher
     /// <summary>
     /// 디스패칭을 실패할 때 까지 무한 반복합니다.
     /// </summary>
-    public void KeepDispatchingUntilFails()
+    public static void KeepDispatchingUntilFails()
     {
         while (TryDispatch())
         {
@@ -275,11 +266,26 @@ public class ConsoleKeyDispatcher
     /// 디스패칭을 무한 반복합니다.
     /// 한 번 실행하면 <see cref="BindExitHandler(ConsoleKey)"/>로 등록한 키 입력 전까지 절대 반환되지 않습니다.
     /// </summary>
-    public void KeepDispatching()
+    public static void KeepDispatching()
     {
+        isRequestedToExitDispatching = false;
+
         while (!isRequestedToExitDispatching)
         {
             TryDispatch();
         }
+    }
+
+    /// <summary>
+    /// 백그라운드 스레드에서 디스패칭을 시작합니다.
+    /// </summary>
+    public static void StartBackgroundDispatching()
+    {
+        Thread dispatchThread = new Thread(() =>
+        {
+            KeepDispatching();
+        });
+
+        dispatchThread.Start();
     }
 }

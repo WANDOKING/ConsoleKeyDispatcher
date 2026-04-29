@@ -15,42 +15,40 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 
 ### 시작하기
 
-1. `ConsoleKeyDispatcher` 클래스를 인스턴스화합니다.
-2. `BindHandler` 또는 `BindAsyncHandler`로 키와 핸들러를 등록합니다.
-3. `BindExitHandler`로 종료 키를 등록합니다(기본 ESC).
-4. `KeepDispatching()`을 호출하여 입력을 처리합니다.
+1. `ConsoleKeyDispatcher.BindHandler` 또는 `ConsoleKeyDispatcher.BindAsyncHandler`로 키와 핸들러를 등록합니다.
+2. `ConsoleKeyDispatcher.BindExitHandler`로 종료 키를 등록합니다(기본 ESC).
+3. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다.
 
 ### 예제 코드
 ```csharp
-ConsoleKeyDispatcher dispatcher = new ConsoleKeyDispatcher();
-
-// 핸들러 정보를 출력하는 도움말 핸들러를 등록합니다.
-dispatcher.BindHandler(ConsoleKey.H, () =>
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.H, () =>
 {
-    foreach ((ConsoleKey key, string? name) in dispatcher.HandlerNames)
+    foreach ((ConsoleKey key, string? name) in ConsoleKeyDispatcher.HandlerNames)
     {
         Console.WriteLine($"Handler: {key} | {name ?? "No Name"}");
     }
 }, "Help");
 
-dispatcher.BindExitHandler();
+ConsoleKeyDispatcher.KeyNotRegistered += (sender, e) =>
+{
+    Console.WriteLine($"Key '{e.Key}' is not registered. Press 'H' for help.");
+};
 
-dispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
-        
-dispatcher.BindHandler(ConsoleKey.B, () => Console.WriteLine(DateTime.Now), "Print DateTime.Now");
-        
-dispatcher.BindAsyncHandler(ConsoleKey.C, async () =>
+ConsoleKeyDispatcher.BindExitHandler();
+
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
+
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.B, () => Console.WriteLine(DateTime.Now), "Print DateTime.Now");
+
+ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.C, async () =>
 {
     await Task.Delay(1000);
     Console.WriteLine("Async operation completed after 1 second.");
 }, "Async Operation");
 
-dispatcher.KeepDispatching();
+Console.WriteLine("Press 'H' for help. Press 'Escape' to exit.");
+ConsoleKeyDispatcher.KeepDispatching();
 ```
-
-## 설치
-
-NuGet 패키지로 배포되지 않으므로, 소스 코드를 프로젝트에 추가하여 사용하세요.
 
 ## 라이선스
 
