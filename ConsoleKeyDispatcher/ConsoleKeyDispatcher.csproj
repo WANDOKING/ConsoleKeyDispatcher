@@ -7,7 +7,7 @@
     
     <!-- NuGet Packaging Properties -->
     <PackageId>ConsoleKeyDispatcher</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>dowankim</Authors>
     <Description>A console key dispatcher library for .NET</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
