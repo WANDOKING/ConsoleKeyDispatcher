@@ -1,7 +1,7 @@
-﻿using System.Text.Encodings.Web;
-using System.Text.Json;
+﻿namespace ConsoleKeyUtils;
 
-namespace ConsoleKeyUtils;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 /// <summary>
 /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트의 인자입니다.
@@ -91,15 +91,18 @@ public static class ConsoleKeyDispatcher
 
     /// <summary>
     /// 등록된 핸들러들의 키와 이름을 JSON 문자열로 반환합니다.
-    /// 키 이름을 프로퍼티로, 핸들러 이름을 값으로 가지는 JSON 객체이며, 이름이 없는 핸들러의 값은 null입니다.
+    /// Handlers 프로퍼티 아래에 Key와 Name을 가지는 객체의 배열 형태이며, 이름이 없는 핸들러의 Name은 null입니다.
     /// </summary>
-    /// <param name="indented">들여쓰기 여부입니다.</param>
+    /// <param name="indented">들여쓰기 여부입니다. 기본값은 true입니다.</param>
     /// <returns>등록된 핸들러들의 키와 이름을 담은 JSON 문자열입니다.</returns>
-    public static string GetJsonDescriptions(bool indented = false)
+    public static string GetJsonDescriptions(bool indented = true)
     {
-        Dictionary<string, string?> descriptionsByKeyName = HandlerNamesByKey.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
+        var descriptions = new
+        {
+            Handlers = HandlerNamesByKey.Select(kv => new { Key = kv.Key.ToString(), Name = kv.Value }).ToArray(),
+        };
 
-        return JsonSerializer.Serialize(descriptionsByKeyName, indented ? IndentedJsonOptions : CompactJsonOptions);
+        return JsonSerializer.Serialize(descriptions, indented ? IndentedJsonOptions : CompactJsonOptions);
     }
 
     /// <summary>
@@ -145,6 +148,16 @@ public static class ConsoleKeyDispatcher
     public static void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
     {
         BindHandler(key, () => isRequestedToExitDispatching = true, "Exit Handler");
+    }
+
+    /// <summary>
+    /// <see cref="GetJsonDescriptions(bool)"/>의 결과를 콘솔에 출력하는 핸들러를 등록합니다.
+    /// </summary>
+    /// <param name="key">입력 키입니다.</param>
+    /// <param name="indented">출력할 JSON의 들여쓰기 여부입니다. 기본값은 true입니다.</param>
+    public static void BindHelpHandler(ConsoleKey key = ConsoleKey.H, bool indented = true)
+    {
+        BindHandler(key, () => Console.WriteLine(GetJsonDescriptions(indented)), "Help Handler");
     }
 
     /// <summary>

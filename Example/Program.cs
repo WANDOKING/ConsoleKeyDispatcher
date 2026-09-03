@@ -1,23 +1,12 @@
-﻿using ConsoleKeyUtils;
+﻿namespace Example;
 
-namespace Example;
+using ConsoleKeyUtils;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
-        ConsoleKeyDispatcher.BindHandler(ConsoleKey.H, () =>
-        {
-            foreach ((ConsoleKey key, string? name) in ConsoleKeyDispatcher.HandlerNames)
-            {
-                Console.WriteLine($"Handler: {key} | {name ?? "No Name"}");
-            }
-        }, "Help");
-
-        ConsoleKeyDispatcher.BindHandler(
-            ConsoleKey.J,
-            () => Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: true)),
-            "Print Handlers As Json");
+        ConsoleKeyDispatcher.BindHelpHandler();
 
         ConsoleKeyDispatcher.KeyNotRegistered += (sender, e) =>
         {

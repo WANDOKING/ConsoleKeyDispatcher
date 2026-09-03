@@ -5,7 +5,8 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 ## 주요 기능
 
 - 특정 키에 동기/비동기 핸들러 등록
-- 등록된 핸들러 이름 및 키 목록 조회 (텍스트 또는 JSON)
+- 등록된 핸들러 이름 및 키 목록 조회 (열거 또는 JSON)
+- 등록된 핸들러 목록을 JSON으로 출력하는 도움말 키 등록 (H 기본)
 - ESC(기본) 또는 지정한 키로 종료
 - 키 입력이 있을 때만 핸들러 실행 또는 무한 디스패칭 루프 지원
 - 등록되지 않은 키 입력 및 핸들러 실행 중 발생한 예외를 이벤트로 통지
@@ -18,22 +19,12 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 
 1. `ConsoleKeyDispatcher.BindHandler` 또는 `ConsoleKeyDispatcher.BindAsyncHandler`로 키와 핸들러를 등록합니다.
 2. `ConsoleKeyDispatcher.BindExitHandler`로 종료 키를 등록합니다(기본 ESC).
-3. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다.
+3. 필요하다면 `ConsoleKeyDispatcher.BindHelpHandler`로 도움말 키를 등록합니다(기본 H).
+4. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다.
 
 ### 예제 코드
 ```csharp
-ConsoleKeyDispatcher.BindHandler(ConsoleKey.H, () =>
-{
-    foreach ((ConsoleKey key, string? name) in ConsoleKeyDispatcher.HandlerNames)
-    {
-        Console.WriteLine($"Handler: {key} | {name ?? "No Name"}");
-    }
-}, "Help");
-
-ConsoleKeyDispatcher.BindHandler(
-    ConsoleKey.J,
-    () => Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: true)),
-    "Print Handlers As Json");
+ConsoleKeyDispatcher.BindHelpHandler();
 
 ConsoleKeyDispatcher.KeyNotRegistered += (sender, e) =>
 {
@@ -78,32 +69,63 @@ ConsoleKeyDispatcher.KeepDispatching();
 ## 등록된 핸들러 목록 조회
 
 `HandlerNames`는 `(ConsoleKey key, string? name)` 튜플을 열거하며, `GetJsonDescriptions()`는 같은 정보를 JSON 문자열로 반환합니다.
-키 이름이 프로퍼티, 핸들러 이름이 값이며 이름 없이 등록한 핸들러의 값은 `null`입니다.
+`Handlers` 배열 안에 핸들러마다 `Key`(키 이름)와 `Name`(핸들러 이름)을 가지는 객체가 들어가며, 이름 없이 등록한 핸들러의 `Name`은 `null`입니다.
 
 ```csharp
 ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
 ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.C, () => Task.CompletedTask, "Async Operation");
 ConsoleKeyDispatcher.BindExitHandler();
 
-// {"A":"Print Hello, World!","C":"Async Operation","Escape":"Exit Handler"}
+// 기본값은 들여쓰기 출력입니다.
 Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions());
 
-// 들여쓰기가 필요하면 indented 인자를 사용합니다.
-Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: true));
+// 한 줄로 받고 싶다면 indented: false를 사용합니다.
+Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: false));
 ```
 
-`indented: true`로 호출했을 때의 출력은 다음과 같습니다.
+기본 호출의 출력은 다음과 같습니다.
 
 ```json
 {
-  "A": "Print Hello, World!",
-  "C": "Async Operation",
-  "Escape": "Exit Handler"
+  "Handlers": [
+    {
+      "Key": "A",
+      "Name": "Print Hello, World!"
+    },
+    {
+      "Key": "C",
+      "Name": "Async Operation"
+    },
+    {
+      "Key": "Escape",
+      "Name": "Exit Handler"
+    }
+  ]
 }
 ```
 
+`indented: false`로 호출하면 한 줄로 반환됩니다.
+
+```json
+{"Handlers":[{"Key":"A","Name":"Print Hello, World!"},{"Key":"C","Name":"Async Operation"},{"Key":"Escape","Name":"Exit Handler"}]}
+```
+
 한글처럼 ASCII가 아닌 핸들러 이름도 `\uXXXX`로 이스케이프되지 않고 그대로 출력됩니다.
-다만 JSON 프로퍼티 순서는 보장되지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
+다만 배열의 순서는 등록 순서를 보장하지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
+
+### 도움말 키 등록
+
+`BindHelpHandler`는 위 JSON을 콘솔에 출력하는 핸들러를 등록합니다. `BindExitHandler`처럼 키만 지정하면 되고, 기본 키는 `H`입니다.
+
+```csharp
+// H 키를 누르면 등록된 핸들러 목록이 JSON으로 출력됩니다.
+ConsoleKeyDispatcher.BindHelpHandler();
+
+// 키와 들여쓰기 여부를 바꿀 수도 있습니다.
+ConsoleKeyDispatcher.BindHelpHandler(ConsoleKey.F1, indented: false);
+```
+
+핸들러 실행 시점에 목록을 조회하므로, `BindHelpHandler`를 먼저 호출하고 나중에 등록한 핸들러도 출력에 포함됩니다.
 
 ## 핸들러 예외 처리
 

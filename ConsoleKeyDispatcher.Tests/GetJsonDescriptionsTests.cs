@@ -1,7 +1,7 @@
+namespace ConsoleKeyUtils.Tests;
+
 using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-namespace ConsoleKeyUtils.Tests;
 
 [TestClass]
 public class GetJsonDescriptionsTests
@@ -13,25 +13,34 @@ public class GetJsonDescriptionsTests
     }
 
     [TestMethod]
-    public void GetJsonDescriptions_NoHandlers_ReturnsEmptyJsonObject()
+    public void GetJsonDescriptions_NoHandlers_ReturnsEmptyHandlerArray()
     {
-        Assert.AreEqual("{}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+        Assert.AreEqual(0, descriptions.Handlers.Length);
     }
 
     [TestMethod]
-    public void GetJsonDescriptions_SingleHandler_ReturnsKeyNameAndHandlerName()
+    public void GetJsonDescriptions_SingleHandler_ReturnsKeyAndName()
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { }, "HandlerA");
 
-        Assert.AreEqual("{\"A\":\"HandlerA\"}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+        Assert.AreEqual(1, descriptions.Handlers.Length);
+        Assert.AreEqual(nameof(ConsoleKey.A), descriptions.Handlers[0].Key);
+        Assert.AreEqual("HandlerA", descriptions.Handlers[0].Name);
     }
 
     [TestMethod]
-    public void GetJsonDescriptions_HandlerWithoutName_ReturnsNullValue()
+    public void GetJsonDescriptions_HandlerWithoutName_ReturnsNullName()
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { });
 
-        Assert.AreEqual("{\"A\":null}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+        Assert.AreEqual(1, descriptions.Handlers.Length);
+        Assert.IsNull(descriptions.Handlers[0].Name);
     }
 
     [TestMethod]
@@ -39,7 +48,11 @@ public class GetJsonDescriptionsTests
     {
         ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.B, () => Task.CompletedTask, "AsyncB");
 
-        Assert.AreEqual("{\"B\":\"AsyncB\"}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+        Assert.AreEqual(1, descriptions.Handlers.Length);
+        Assert.AreEqual(nameof(ConsoleKey.B), descriptions.Handlers[0].Key);
+        Assert.AreEqual("AsyncB", descriptions.Handlers[0].Name);
     }
 
     [TestMethod]
@@ -49,13 +62,12 @@ public class GetJsonDescriptionsTests
         ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.B, () => Task.CompletedTask, "HandlerB");
         ConsoleKeyDispatcher.BindExitHandler();
 
-        var descriptions = JsonSerializer.Deserialize<Dictionary<string, string?>>(ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
 
-        Assert.IsNotNull(descriptions);
-        Assert.AreEqual(3, descriptions.Count);
-        Assert.AreEqual("HandlerA", descriptions["A"]);
-        Assert.AreEqual("HandlerB", descriptions["B"]);
-        Assert.AreEqual("Exit Handler", descriptions[nameof(ConsoleKey.Escape)]);
+        Assert.AreEqual(3, descriptions.Handlers.Length);
+        Assert.AreEqual("HandlerA", FindName(descriptions, ConsoleKey.A));
+        Assert.AreEqual("HandlerB", FindName(descriptions, ConsoleKey.B));
+        Assert.AreEqual("Exit Handler", FindName(descriptions, ConsoleKey.Escape));
     }
 
     [TestMethod]
@@ -66,7 +78,10 @@ public class GetJsonDescriptionsTests
 
         ConsoleKeyDispatcher.RemoveHandler(ConsoleKey.A);
 
-        Assert.AreEqual("{\"B\":\"HandlerB\"}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+        Assert.AreEqual(1, descriptions.Handlers.Length);
+        Assert.AreEqual(nameof(ConsoleKey.B), descriptions.Handlers[0].Key);
     }
 
     [TestMethod]
@@ -74,7 +89,7 @@ public class GetJsonDescriptionsTests
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { }, "도움말");
 
-        Assert.AreEqual("{\"A\":\"도움말\"}", ConsoleKeyDispatcher.GetJsonDescriptions());
+        StringAssert.Contains(ConsoleKeyDispatcher.GetJsonDescriptions(), "도움말");
     }
 
     [TestMethod]
@@ -82,22 +97,17 @@ public class GetJsonDescriptionsTests
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { }, "Print \"Hello\"");
 
-        var descriptions = JsonSerializer.Deserialize<Dictionary<string, string?>>(ConsoleKeyDispatcher.GetJsonDescriptions());
+        var descriptions = Deserialize(ConsoleKeyDispatcher.GetJsonDescriptions());
 
-        Assert.IsNotNull(descriptions);
-        Assert.AreEqual("Print \"Hello\"", descriptions["A"]);
+        Assert.AreEqual("Print \"Hello\"", descriptions.Handlers[0].Name);
     }
 
     [TestMethod]
-    public void GetJsonDescriptions_Indented_ContainsNewLine()
+    public void GetJsonDescriptions_ByDefault_IsIndented()
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { }, "HandlerA");
 
-        var json = ConsoleKeyDispatcher.GetJsonDescriptions(indented: true);
-
-        StringAssert.Contains(json, Environment.NewLine);
-        StringAssert.Contains(json, "\"A\"");
-        StringAssert.Contains(json, "\"HandlerA\"");
+        StringAssert.Contains(ConsoleKeyDispatcher.GetJsonDescriptions(), Environment.NewLine);
     }
 
     [TestMethod]
@@ -106,8 +116,38 @@ public class GetJsonDescriptionsTests
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { }, "HandlerA");
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.B, () => { }, "HandlerB");
 
-        var json = ConsoleKeyDispatcher.GetJsonDescriptions();
+        var json = ConsoleKeyDispatcher.GetJsonDescriptions(indented: false);
 
         Assert.IsFalse(json.Contains('\n'));
+        Assert.AreEqual(
+            "{\"Handlers\":[{\"Key\":\"A\",\"Name\":\"HandlerA\"},{\"Key\":\"B\",\"Name\":\"HandlerB\"}]}",
+            json);
+    }
+
+    private static HandlerDescriptions Deserialize(string json)
+    {
+        var descriptions = JsonSerializer.Deserialize<HandlerDescriptions>(json);
+
+        Assert.IsNotNull(descriptions);
+        Assert.IsNotNull(descriptions.Handlers);
+
+        return descriptions;
+    }
+
+    private static string? FindName(HandlerDescriptions descriptions, ConsoleKey key)
+    {
+        return descriptions.Handlers.Single(handler => handler.Key == key.ToString()).Name;
+    }
+
+    private sealed class HandlerDescriptions
+    {
+        public HandlerDescription[] Handlers { get; set; } = Array.Empty<HandlerDescription>();
+    }
+
+    private sealed class HandlerDescription
+    {
+        public string Key { get; set; } = string.Empty;
+
+        public string? Name { get; set; }
     }
 }
