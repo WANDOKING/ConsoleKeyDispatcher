@@ -14,3 +14,6 @@ dotnet_diagnostic.SA1642.severity = none
 
 # IDE0090: Use 'new(...)'
 dotnet_diagnostic.IDE0090.severity = none
+
+# using 지시문은 namespace 선언 아래에 둡니다 (SA1200)
+csharp_using_directive_placement = inside_namespace:warning
