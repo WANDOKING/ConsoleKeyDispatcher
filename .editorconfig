@@ -14,3 +14,6 @@ dotnet_diagnostic.SA1642.severity = none
 
 # IDE0090: Use 'new(...)'
 dotnet_diagnostic.IDE0090.severity = none
+# SA1200: Using directive should appear within a namespace declaration
+# (file-scoped namespace를 사용하므로 using은 namespace 선언보다 위에 둡니다)
+dotnet_diagnostic.SA1200.severity = none

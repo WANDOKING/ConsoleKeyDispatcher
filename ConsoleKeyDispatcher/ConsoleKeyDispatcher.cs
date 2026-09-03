@@ -1,4 +1,7 @@
-﻿namespace ConsoleKeyUtils;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
+
+namespace ConsoleKeyUtils;
 
 /// <summary>
 /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트의 인자입니다.
@@ -55,6 +58,20 @@ public static class ConsoleKeyDispatcher
     private static readonly Dictionary<ConsoleKey, string?> HandlerNamesByKey = new Dictionary<ConsoleKey, string?>();
     private static readonly Dictionary<ConsoleKey, Func<Task>> AsyncHandlersByKey = new Dictionary<ConsoleKey, Func<Task>>();
     private static readonly Dictionary<ConsoleKey, Action> SyncHandlersByKey = new Dictionary<ConsoleKey, Action>();
+    private static readonly JsonSerializerOptions CompactJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+
+        // 한글 등 비 ASCII 핸들러 이름이 \uXXXX로 이스케이프되지 않고 그대로 출력되도록 합니다.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     private static bool isRequestedToExitDispatching;
 
     /// <summary>
@@ -71,6 +88,19 @@ public static class ConsoleKeyDispatcher
     /// 등록된 핸들러들입니다.
     /// </summary>
     public static IEnumerable<(ConsoleKey key, string? name)> HandlerNames => HandlerNamesByKey.Select(kv => (kv.Key, kv.Value));
+
+    /// <summary>
+    /// 등록된 핸들러들의 키와 이름을 JSON 문자열로 반환합니다.
+    /// 키 이름을 프로퍼티로, 핸들러 이름을 값으로 가지는 JSON 객체이며, 이름이 없는 핸들러의 값은 null입니다.
+    /// </summary>
+    /// <param name="indented">들여쓰기 여부입니다.</param>
+    /// <returns>등록된 핸들러들의 키와 이름을 담은 JSON 문자열입니다.</returns>
+    public static string GetJsonDescriptions(bool indented = false)
+    {
+        Dictionary<string, string?> descriptionsByKeyName = HandlerNamesByKey.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
+
+        return JsonSerializer.Serialize(descriptionsByKeyName, indented ? IndentedJsonOptions : CompactJsonOptions);
+    }
 
     /// <summary>
     /// 비동기 핸들러를 등록합니다.

@@ -5,7 +5,7 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 ## 주요 기능
 
 - 특정 키에 동기/비동기 핸들러 등록
-- 등록된 핸들러 이름 및 키 목록 조회
+- 등록된 핸들러 이름 및 키 목록 조회 (텍스트 또는 JSON)
 - ESC(기본) 또는 지정한 키로 종료
 - 키 입력이 있을 때만 핸들러 실행 또는 무한 디스패칭 루프 지원
 - 등록되지 않은 키 입력 및 핸들러 실행 중 발생한 예외를 이벤트로 통지
@@ -30,9 +30,19 @@ ConsoleKeyDispatcher.BindHandler(ConsoleKey.H, () =>
     }
 }, "Help");
 
+ConsoleKeyDispatcher.BindHandler(
+    ConsoleKey.J,
+    () => Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: true)),
+    "Print Handlers As Json");
+
 ConsoleKeyDispatcher.KeyNotRegistered += (sender, e) =>
 {
     Console.WriteLine($"Key '{e.Key}' is not registered. Press 'H' for help.");
+};
+
+ConsoleKeyDispatcher.HandlerException += (sender, e) =>
+{
+    Console.WriteLine($"Handler for key '{e.Key}' failed: {e.Exception}");
 };
 
 ConsoleKeyDispatcher.BindExitHandler();
@@ -47,9 +57,53 @@ ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.C, async () =>
     Console.WriteLine("Async operation completed after 1 second.");
 }, "Async Operation");
 
+ConsoleKeyDispatcher.BindHandler(
+    ConsoleKey.D,
+    () => throw new InvalidOperationException("Something went wrong."),
+    "Throw Exception");
+
+ConsoleKeyDispatcher.BindAsyncHandler(
+    ConsoleKey.E,
+    async () =>
+    {
+        await Task.Delay(100);
+        throw new TimeoutException("Async operation timed out.");
+    },
+    "Throw Async Exception");
+
 Console.WriteLine("Press 'H' for help. Press 'Escape' to exit.");
 ConsoleKeyDispatcher.KeepDispatching();
 ```
+
+## 등록된 핸들러 목록 조회
+
+`HandlerNames`는 `(ConsoleKey key, string? name)` 튜플을 열거하며, `GetJsonDescriptions()`는 같은 정보를 JSON 문자열로 반환합니다.
+키 이름이 프로퍼티, 핸들러 이름이 값이며 이름 없이 등록한 핸들러의 값은 `null`입니다.
+
+```csharp
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
+ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.C, () => Task.CompletedTask, "Async Operation");
+ConsoleKeyDispatcher.BindExitHandler();
+
+// {"A":"Print Hello, World!","C":"Async Operation","Escape":"Exit Handler"}
+Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions());
+
+// 들여쓰기가 필요하면 indented 인자를 사용합니다.
+Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: true));
+```
+
+`indented: true`로 호출했을 때의 출력은 다음과 같습니다.
+
+```json
+{
+  "A": "Print Hello, World!",
+  "C": "Async Operation",
+  "Escape": "Exit Handler"
+}
+```
+
+한글처럼 ASCII가 아닌 핸들러 이름도 `\uXXXX`로 이스케이프되지 않고 그대로 출력됩니다.
+다만 JSON 프로퍼티 순서는 보장되지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
 
 ## 핸들러 예외 처리
 
