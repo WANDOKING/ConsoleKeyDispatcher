@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/1. ConsoleKeyDispatcher/">
+    <Project Path="ConsoleKeyDispatcher/ConsoleKeyDispatcher.csproj" />
+  </Folder>
+  <Folder Name="/2. Tests/">
+    <Project Path="ConsoleKeyDispatcher.Tests/ConsoleKeyDispatcher.Tests.csproj" />
+  </Folder>
+  <Folder Name="/3. Examples/">
+    <Project Path="Example/Example.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+</Solution>
