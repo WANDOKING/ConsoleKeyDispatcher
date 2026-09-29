@@ -60,6 +60,16 @@ public class ConsoleKeyDispatcherTests
     }
 
     [TestMethod]
+    public void BindHandler_NullHandler_ThrowsArgumentNullExceptionAndDoesNotRegister()
+    {
+        var ex = Assert.ThrowsException<ArgumentNullException>(
+            () => ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, null!));
+
+        Assert.AreEqual("handler", ex.ParamName);
+        Assert.AreEqual(0, ConsoleKeyDispatcher.HandlerNames.Count());
+    }
+
+    [TestMethod]
     public void BindHandler_DuplicateKey_ExceptionMessageContainsKeyName()
     {
         ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => { });
@@ -98,6 +108,16 @@ public class ConsoleKeyDispatcherTests
 
         Assert.ThrowsException<ArgumentException>(
             () => ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.A, () => Task.CompletedTask));
+    }
+
+    [TestMethod]
+    public void BindAsyncHandler_NullHandler_ThrowsArgumentNullExceptionAndDoesNotRegister()
+    {
+        var ex = Assert.ThrowsException<ArgumentNullException>(
+            () => ConsoleKeyDispatcher.BindAsyncHandler(ConsoleKey.A, null!));
+
+        Assert.AreEqual("handler", ex.ParamName);
+        Assert.AreEqual(0, ConsoleKeyDispatcher.HandlerNames.Count());
     }
 
     [TestMethod]

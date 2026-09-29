@@ -111,9 +111,12 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
-    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/>가 null일 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할 경우 발생합니다.</exception>
     public static void BindAsyncHandler(ConsoleKey key, Func<Task> handler, string? name = default)
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
@@ -129,9 +132,12 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
-    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/>가 null일 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할 경우 발생합니다.</exception>
     public static void BindHandler(ConsoleKey key, Action handler, string? name = default)
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
