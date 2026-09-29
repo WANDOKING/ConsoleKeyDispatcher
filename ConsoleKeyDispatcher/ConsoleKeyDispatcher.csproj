@@ -4,29 +4,35 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
     <!-- NuGet Packaging Properties -->
     <PackageId>ConsoleKeyDispatcher</PackageId>
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
     <Authors>dowankim</Authors>
     <Description>A console key dispatcher library for .NET</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageProjectUrl>https://github.com/WANDOKING/ConsoleKeyDispatcher</PackageProjectUrl>
     <RepositoryUrl>https://github.com/WANDOKING/ConsoleKeyDispatcher</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Tags>console;dispatcher</Tags>
+    <PackageTags>console;dispatcher</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!-- Source Link: 저장소 URL은 SDK가 git origin에서 자동으로 채웁니다 -->
+  <PropertyGroup>
+    <!-- PDB를 dll에 포함해 nuget.org 사용자가 별도 심볼 서버 설정 없이 소스로 디버깅할 수 있게 합니다 -->
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <!-- CI 빌드에서 PDB의 로컬 경로를 /_/로 정규화해 결정적 빌드로 만듭니다 -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

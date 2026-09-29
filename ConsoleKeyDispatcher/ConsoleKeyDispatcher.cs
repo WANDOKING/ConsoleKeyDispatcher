@@ -55,6 +55,8 @@ public class HandlerExceptionEventArgs : EventArgs
 /// </summary>
 public static class ConsoleKeyDispatcher
 {
+    private const string BackgroundDispatchingThreadName = "ConsoleKeyDispatcher";
+
     private static readonly Dictionary<ConsoleKey, string?> HandlerNamesByKey = new Dictionary<ConsoleKey, string?>();
     private static readonly Dictionary<ConsoleKey, Func<Task>> AsyncHandlersByKey = new Dictionary<ConsoleKey, Func<Task>>();
     private static readonly Dictionary<ConsoleKey, Action> SyncHandlersByKey = new Dictionary<ConsoleKey, Action>();
@@ -72,7 +74,8 @@ public static class ConsoleKeyDispatcher
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private static bool isRequestedToExitDispatching;
+    private static CancellationTokenSource exitDispatchingSource = new CancellationTokenSource();
+    private static Thread? backgroundDispatchingThread;
 
     /// <summary>
     /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
@@ -111,9 +114,12 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
-    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/>가 null일 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할 경우 발생합니다.</exception>
     public static void BindAsyncHandler(ConsoleKey key, Func<Task> handler, string? name = default)
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
@@ -129,9 +135,12 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     /// <param name="handler">키 입력 시 실행할 핸들러입니다.</param>
     /// <param name="name">핸들러의 이름입니다.</param>
-    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할할 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/>가 null일 경우 발생합니다.</exception>
+    /// <exception cref="ArgumentException">이미 등록된 키를 등록하고자 할 경우 발생합니다.</exception>
     public static void BindHandler(ConsoleKey key, Action handler, string? name = default)
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         if (HandlerNamesByKey.ContainsKey(key))
         {
             throw new ArgumentException($"A handler for the key '{key}' is already registered.", nameof(key));
@@ -147,7 +156,7 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     public static void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
     {
-        BindHandler(key, () => isRequestedToExitDispatching = true, "Exit Handler");
+        BindHandler(key, () => exitDispatchingSource.Cancel(), "Exit Handler");
     }
 
     /// <summary>
@@ -188,7 +197,7 @@ public static class ConsoleKeyDispatcher
         HandlerNamesByKey.Clear();
         AsyncHandlersByKey.Clear();
         SyncHandlersByKey.Clear();
-        isRequestedToExitDispatching = false;
+        exitDispatchingSource = new CancellationTokenSource();
         KeyNotRegistered = null;
         HandlerException = null;
     }
@@ -224,7 +233,7 @@ public static class ConsoleKeyDispatcher
     /// <returns>핸들러를 실행했을 경우 true, 해당하는 키에 대한 핸들러가 입력되지 않았을 경우 false입니다.</returns>
     public static bool TryDispatch()
     {
-        return TryDispatchAsync().Result;
+        return TryDispatchAsync().GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -311,24 +320,61 @@ public static class ConsoleKeyDispatcher
     /// </summary>
     public static void KeepDispatching()
     {
-        isRequestedToExitDispatching = false;
+        exitDispatchingSource = new CancellationTokenSource();
+        var exitToken = exitDispatchingSource.Token;
 
-        while (!isRequestedToExitDispatching)
+        while (exitToken.IsCancellationRequested is false)
         {
             TryDispatch();
         }
     }
 
     /// <summary>
-    /// 백그라운드 스레드에서 디스패칭을 시작합니다.
+    /// 디스패칭을 비동기로 무한 반복합니다.
+    /// <see cref="BindExitHandler(ConsoleKey)"/>로 등록한 키가 입력되면 완료됩니다.
+    /// 비동기 핸들러를 스레드 블로킹 없이 await하지만, 키 입력을 기다리는 동안에는 호출 스레드가 블로킹됩니다.
+    /// 다른 작업과 동시에 실행하려면 <see cref="StartBackgroundDispatching"/>을 더 권장합니다.
     /// </summary>
+    /// <returns>디스패칭 루프 작업입니다.</returns>
+    public static async Task KeepDispatchingAsync()
+    {
+        exitDispatchingSource = new CancellationTokenSource();
+        var exitToken = exitDispatchingSource.Token;
+
+        while (exitToken.IsCancellationRequested is false)
+        {
+            await TryDispatchAsync();
+        }
+    }
+
+    /// <summary>
+    /// 백그라운드 스레드에서 디스패칭을 시작합니다.
+    /// 백그라운드 스레드이므로 메인 스레드가 끝나면 디스패칭도 함께 종료됩니다.
+    /// 종료 키 입력까지 기다리려면 <see cref="JoinBackgroundDispatching"/>을 호출하세요.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">이전에 시작한 백그라운드 디스패칭이 아직 실행 중일 경우 발생합니다.</exception>
     public static void StartBackgroundDispatching()
     {
-        Thread dispatchThread = new Thread(() =>
+        if (backgroundDispatchingThread?.IsAlive is true)
         {
-            KeepDispatching();
-        });
+            throw new InvalidOperationException("Background dispatching is already running.");
+        }
 
-        dispatchThread.Start();
+        backgroundDispatchingThread = new Thread(KeepDispatching)
+        {
+            IsBackground = true,
+            Name = BackgroundDispatchingThreadName,
+        };
+
+        backgroundDispatchingThread.Start();
+    }
+
+    /// <summary>
+    /// <see cref="StartBackgroundDispatching"/>으로 시작한 디스패칭이 종료될 때까지 기다립니다.
+    /// 시작한 적이 없거나 이미 종료되었다면 바로 반환됩니다.
+    /// </summary>
+    public static void JoinBackgroundDispatching()
+    {
+        backgroundDispatchingThread?.Join();
     }
 }

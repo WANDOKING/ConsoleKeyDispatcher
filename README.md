@@ -13,14 +13,14 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 
 ## 사용 예시
 
-아래는 Example 프로젝트의 간단한 사용 예시입니다.
+아래는 ConsoleKeyDispatcher.Example 프로젝트의 간단한 사용 예시입니다.
 
 ### 시작하기
 
 1. `ConsoleKeyDispatcher.BindHandler` 또는 `ConsoleKeyDispatcher.BindAsyncHandler`로 키와 핸들러를 등록합니다.
 2. `ConsoleKeyDispatcher.BindExitHandler`로 종료 키를 등록합니다(기본 ESC).
 3. 필요하다면 `ConsoleKeyDispatcher.BindHelpHandler`로 도움말 키를 등록합니다(기본 H).
-4. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다.
+4. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다. 비동기 핸들러가 많다면 `await ConsoleKeyDispatcher.KeepDispatchingAsync()`를 사용할 수 있습니다.
 
 ### 예제 코드
 ```csharp
@@ -104,14 +104,7 @@ Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: false));
 }
 ```
 
-`indented: false`로 호출하면 한 줄로 반환됩니다.
-
-```json
-{"Handlers":[{"Key":"A","Name":"Print Hello, World!"},{"Key":"C","Name":"Async Operation"},{"Key":"Escape","Name":"Exit Handler"}]}
-```
-
-한글처럼 ASCII가 아닌 핸들러 이름도 `\uXXXX`로 이스케이프되지 않고 그대로 출력됩니다.
-다만 배열의 순서는 등록 순서를 보장하지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
+배열의 순서는 등록 순서를 보장하지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
 
 ### 도움말 키 등록
 
@@ -127,9 +120,26 @@ ConsoleKeyDispatcher.BindHelpHandler(ConsoleKey.F1, indented: false);
 
 핸들러 실행 시점에 목록을 조회하므로, `BindHelpHandler`를 먼저 호출하고 나중에 등록한 핸들러도 출력에 포함됩니다.
 
+## 백그라운드 디스패칭
+
+`StartBackgroundDispatching()`은 `ConsoleKeyDispatcher`라는 이름의 백그라운드 스레드에서 `KeepDispatching()`을 실행합니다.
+
+```csharp
+ConsoleKeyDispatcher.BindExitHandler();
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
+
+ConsoleKeyDispatcher.StartBackgroundDispatching();
+
+// 디스패칭과 동시에 다른 작업을 수행합니다.
+DoOtherWork();
+
+// ESC 입력으로 디스패칭이 종료될 때까지 기다립니다.
+ConsoleKeyDispatcher.JoinBackgroundDispatching();
+```
+
 ## 핸들러 예외 처리
 
-핸들러 내부에서 발생한 예외는 디스패처가 잡아서 `HandlerException` 이벤트로 통지하며, `Dispatch()`나 `KeepDispatching()`을 호출한 쪽으로는 전파되지 않습니다.
+핸들러 내부에서 발생한 예외는 디스패처가 잡아서 `HandlerException` 이벤트로 통지하며, `Dispatch()`, `KeepDispatching()`, `KeepDispatchingAsync()`를 호출한 쪽으로는 전파되지 않습니다.
 덕분에 핸들러 하나가 실패해도 디스패칭 루프는 중단되지 않지만, **`HandlerException`을 구독하지 않으면 예외가 아무 흔적 없이 사라지므로 반드시 구독하는 것을 권장합니다.**
 
 ```csharp
