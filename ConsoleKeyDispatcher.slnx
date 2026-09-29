@@ -6,7 +6,7 @@
     <Project Path="ConsoleKeyDispatcher.Tests/ConsoleKeyDispatcher.Tests.csproj" />
   </Folder>
   <Folder Name="/3. Examples/">
-    <Project Path="Example/Example.csproj" />
+    <Project Path="ConsoleKeyDispatcher.Example/ConsoleKeyDispatcher.Example.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />

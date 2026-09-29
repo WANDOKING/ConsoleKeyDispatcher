@@ -13,7 +13,7 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 
 ## 사용 예시
 
-아래는 Example 프로젝트의 간단한 사용 예시입니다.
+아래는 ConsoleKeyDispatcher.Example 프로젝트의 간단한 사용 예시입니다.
 
 ### 시작하기
 
