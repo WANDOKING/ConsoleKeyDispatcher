@@ -20,7 +20,7 @@ ConsoleKeyDispatcher는 콘솔 애플리케이션에서 키 입력에 따라 다
 1. `ConsoleKeyDispatcher.BindHandler` 또는 `ConsoleKeyDispatcher.BindAsyncHandler`로 키와 핸들러를 등록합니다.
 2. `ConsoleKeyDispatcher.BindExitHandler`로 종료 키를 등록합니다(기본 ESC).
 3. 필요하다면 `ConsoleKeyDispatcher.BindHelpHandler`로 도움말 키를 등록합니다(기본 H).
-4. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다.
+4. `ConsoleKeyDispatcher.KeepDispatching()`을 호출하여 입력을 처리합니다. 비동기 핸들러가 많다면 `await ConsoleKeyDispatcher.KeepDispatchingAsync()`를 사용할 수 있습니다.
 
 ### 예제 코드
 ```csharp
@@ -129,7 +129,7 @@ ConsoleKeyDispatcher.BindHelpHandler(ConsoleKey.F1, indented: false);
 
 ## 핸들러 예외 처리
 
-핸들러 내부에서 발생한 예외는 디스패처가 잡아서 `HandlerException` 이벤트로 통지하며, `Dispatch()`나 `KeepDispatching()`을 호출한 쪽으로는 전파되지 않습니다.
+핸들러 내부에서 발생한 예외는 디스패처가 잡아서 `HandlerException` 이벤트로 통지하며, `Dispatch()`, `KeepDispatching()`, `KeepDispatchingAsync()`를 호출한 쪽으로는 전파되지 않습니다.
 덕분에 핸들러 하나가 실패해도 디스패칭 루프는 중단되지 않지만, **`HandlerException`을 구독하지 않으면 예외가 아무 흔적 없이 사라지므로 반드시 구독하는 것을 권장합니다.**
 
 ```csharp

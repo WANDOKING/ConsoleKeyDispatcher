@@ -327,6 +327,24 @@ public static class ConsoleKeyDispatcher
     }
 
     /// <summary>
+    /// 디스패칭을 비동기로 무한 반복합니다.
+    /// <see cref="BindExitHandler(ConsoleKey)"/>로 등록한 키가 입력되면 완료됩니다.
+    /// 비동기 핸들러를 스레드 블로킹 없이 await하지만, 키 입력을 기다리는 동안에는 호출 스레드가 블로킹됩니다.
+    /// 다른 작업과 동시에 실행하려면 <see cref="StartBackgroundDispatching"/>을 더 권장합니다.
+    /// </summary>
+    /// <returns>디스패칭 루프 작업입니다.</returns>
+    public static async Task KeepDispatchingAsync()
+    {
+        exitDispatchingSource = new CancellationTokenSource();
+        var exitToken = exitDispatchingSource.Token;
+
+        while (exitToken.IsCancellationRequested is false)
+        {
+            await TryDispatchAsync();
+        }
+    }
+
+    /// <summary>
     /// 백그라운드 스레드에서 디스패칭을 시작합니다.
     /// </summary>
     public static void StartBackgroundDispatching()
