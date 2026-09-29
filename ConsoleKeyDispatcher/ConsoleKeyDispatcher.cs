@@ -55,6 +55,8 @@ public class HandlerExceptionEventArgs : EventArgs
 /// </summary>
 public static class ConsoleKeyDispatcher
 {
+    private const string BackgroundDispatchingThreadName = "ConsoleKeyDispatcher";
+
     private static readonly Dictionary<ConsoleKey, string?> HandlerNamesByKey = new Dictionary<ConsoleKey, string?>();
     private static readonly Dictionary<ConsoleKey, Func<Task>> AsyncHandlersByKey = new Dictionary<ConsoleKey, Func<Task>>();
     private static readonly Dictionary<ConsoleKey, Action> SyncHandlersByKey = new Dictionary<ConsoleKey, Action>();
@@ -73,6 +75,7 @@ public static class ConsoleKeyDispatcher
     };
 
     private static CancellationTokenSource exitDispatchingSource = new CancellationTokenSource();
+    private static Thread? backgroundDispatchingThread;
 
     /// <summary>
     /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
@@ -346,14 +349,32 @@ public static class ConsoleKeyDispatcher
 
     /// <summary>
     /// 백그라운드 스레드에서 디스패칭을 시작합니다.
+    /// 백그라운드 스레드이므로 메인 스레드가 끝나면 디스패칭도 함께 종료됩니다.
+    /// 종료 키 입력까지 기다리려면 <see cref="JoinBackgroundDispatching"/>을 호출하세요.
     /// </summary>
+    /// <exception cref="InvalidOperationException">이전에 시작한 백그라운드 디스패칭이 아직 실행 중일 경우 발생합니다.</exception>
     public static void StartBackgroundDispatching()
     {
-        Thread dispatchThread = new Thread(() =>
+        if (backgroundDispatchingThread?.IsAlive is true)
         {
-            KeepDispatching();
-        });
+            throw new InvalidOperationException("Background dispatching is already running.");
+        }
 
-        dispatchThread.Start();
+        backgroundDispatchingThread = new Thread(KeepDispatching)
+        {
+            IsBackground = true,
+            Name = BackgroundDispatchingThreadName,
+        };
+
+        backgroundDispatchingThread.Start();
+    }
+
+    /// <summary>
+    /// <see cref="StartBackgroundDispatching"/>으로 시작한 디스패칭이 종료될 때까지 기다립니다.
+    /// 시작한 적이 없거나 이미 종료되었다면 바로 반환됩니다.
+    /// </summary>
+    public static void JoinBackgroundDispatching()
+    {
+        backgroundDispatchingThread?.Join();
     }
 }

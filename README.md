@@ -104,14 +104,7 @@ Console.WriteLine(ConsoleKeyDispatcher.GetJsonDescriptions(indented: false));
 }
 ```
 
-`indented: false`로 호출하면 한 줄로 반환됩니다.
-
-```json
-{"Handlers":[{"Key":"A","Name":"Print Hello, World!"},{"Key":"C","Name":"Async Operation"},{"Key":"Escape","Name":"Exit Handler"}]}
-```
-
-한글처럼 ASCII가 아닌 핸들러 이름도 `\uXXXX`로 이스케이프되지 않고 그대로 출력됩니다.
-다만 배열의 순서는 등록 순서를 보장하지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
+배열의 순서는 등록 순서를 보장하지 않으므로, 정렬된 결과가 필요하다면 역직렬화 후 직접 정렬해서 사용하세요.
 
 ### 도움말 키 등록
 
@@ -126,6 +119,23 @@ ConsoleKeyDispatcher.BindHelpHandler(ConsoleKey.F1, indented: false);
 ```
 
 핸들러 실행 시점에 목록을 조회하므로, `BindHelpHandler`를 먼저 호출하고 나중에 등록한 핸들러도 출력에 포함됩니다.
+
+## 백그라운드 디스패칭
+
+`StartBackgroundDispatching()`은 `ConsoleKeyDispatcher`라는 이름의 백그라운드 스레드에서 `KeepDispatching()`을 실행합니다.
+
+```csharp
+ConsoleKeyDispatcher.BindExitHandler();
+ConsoleKeyDispatcher.BindHandler(ConsoleKey.A, () => Console.WriteLine("Hello, World!"), "Print Hello, World!");
+
+ConsoleKeyDispatcher.StartBackgroundDispatching();
+
+// 디스패칭과 동시에 다른 작업을 수행합니다.
+DoOtherWork();
+
+// ESC 입력으로 디스패칭이 종료될 때까지 기다립니다.
+ConsoleKeyDispatcher.JoinBackgroundDispatching();
+```
 
 ## 핸들러 예외 처리
 

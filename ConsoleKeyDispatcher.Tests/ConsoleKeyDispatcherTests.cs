@@ -391,4 +391,11 @@ public class ConsoleKeyDispatcherTests
         Assert.AreEqual(1, handlers.Count);
         Assert.AreEqual("After", handlers[0].name);
     }
+
+    [TestMethod]
+    [Timeout(5000)]
+    public void JoinBackgroundDispatching_NotStarted_ReturnsImmediately()
+    {
+        ConsoleKeyDispatcher.JoinBackgroundDispatching();
+    }
 }
