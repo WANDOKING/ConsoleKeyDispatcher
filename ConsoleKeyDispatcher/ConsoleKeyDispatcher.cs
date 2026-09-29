@@ -72,7 +72,7 @@ public static class ConsoleKeyDispatcher
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private static bool isRequestedToExitDispatching;
+    private static CancellationTokenSource exitDispatchingSource = new CancellationTokenSource();
 
     /// <summary>
     /// 등록되지 않은 키가 입력되었을 때 발생하는 이벤트입니다.
@@ -153,7 +153,7 @@ public static class ConsoleKeyDispatcher
     /// <param name="key">입력 키입니다.</param>
     public static void BindExitHandler(ConsoleKey key = ConsoleKey.Escape)
     {
-        BindHandler(key, () => isRequestedToExitDispatching = true, "Exit Handler");
+        BindHandler(key, () => exitDispatchingSource.Cancel(), "Exit Handler");
     }
 
     /// <summary>
@@ -194,7 +194,7 @@ public static class ConsoleKeyDispatcher
         HandlerNamesByKey.Clear();
         AsyncHandlersByKey.Clear();
         SyncHandlersByKey.Clear();
-        isRequestedToExitDispatching = false;
+        exitDispatchingSource = new CancellationTokenSource();
         KeyNotRegistered = null;
         HandlerException = null;
     }
@@ -317,9 +317,10 @@ public static class ConsoleKeyDispatcher
     /// </summary>
     public static void KeepDispatching()
     {
-        isRequestedToExitDispatching = false;
+        exitDispatchingSource = new CancellationTokenSource();
+        var exitToken = exitDispatchingSource.Token;
 
-        while (!isRequestedToExitDispatching)
+        while (exitToken.IsCancellationRequested is false)
         {
             TryDispatch();
         }
