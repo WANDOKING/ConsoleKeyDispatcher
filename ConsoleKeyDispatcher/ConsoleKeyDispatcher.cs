@@ -224,7 +224,7 @@ public static class ConsoleKeyDispatcher
     /// <returns>핸들러를 실행했을 경우 true, 해당하는 키에 대한 핸들러가 입력되지 않았을 경우 false입니다.</returns>
     public static bool TryDispatch()
     {
-        return TryDispatchAsync().Result;
+        return TryDispatchAsync().GetAwaiter().GetResult();
     }
 
     /// <summary>
